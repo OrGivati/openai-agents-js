@@ -1,5 +1,11 @@
 # @openai/agents-core
 
+## 0.14.3
+
+### Patch Changes
+
+- 1154aa0: fix: include every paginated MCP tool in agent tool discovery
+
 ## 0.14.2
 
 ### Patch Changes
