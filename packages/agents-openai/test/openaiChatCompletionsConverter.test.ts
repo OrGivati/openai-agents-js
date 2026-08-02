@@ -43,6 +43,21 @@ describe('itemsToMessages', () => {
     expect(args.queries).toEqual(['foo']);
     expect(args.status).toBe('completed');
   });
+
+  test('excludes application-owned item metadata from messages', () => {
+    const items: protocol.ModelItem[] = [
+      {
+        type: 'message',
+        role: 'user',
+        content: 'hi',
+        metadata: { kind: 'voice', visibility: 'client-only' },
+      } as protocol.UserMessageItem,
+    ];
+
+    const messages = itemsToMessages(items);
+    expect(messages).toHaveLength(1);
+    expect(JSON.stringify(messages)).not.toContain('metadata');
+  });
 });
 
 describe('convertToolChoice', () => {

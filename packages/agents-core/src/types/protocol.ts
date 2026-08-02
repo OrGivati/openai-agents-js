@@ -14,6 +14,11 @@ export const SharedBase = z.object({
    * specific fields.
    */
   providerData: z.record(z.string(), z.any()).optional(),
+  /**
+   * Optional application-owned data attached to this item. The SDK treats it as opaque: it is
+   * preserved across serialization and session persistence but never sent to a model provider.
+   */
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type SharedBase = z.infer<typeof SharedBase>;

@@ -729,6 +729,29 @@ describe('getInputItems', () => {
     ]);
   });
 
+  it('excludes application-owned item metadata from the request payload', () => {
+    const items = getInputItems([
+      {
+        type: 'message',
+        role: 'user',
+        content: 'hi',
+        metadata: { kind: 'voice', visibility: 'client-only' },
+      },
+      {
+        type: 'function_call',
+        id: 'f1',
+        name: 'fn',
+        callId: 'c1',
+        arguments: '{}',
+        status: 'completed',
+        metadata: { internal: true },
+      },
+    ] as any);
+
+    expect(items).toHaveLength(2);
+    expect(JSON.stringify(items)).not.toContain('metadata');
+  });
+
   it('converts messages and tool calls/results', () => {
     const items = getInputItems([
       { role: 'user', content: 'hi', id: 'u1' },

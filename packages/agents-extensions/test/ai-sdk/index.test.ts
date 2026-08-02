@@ -513,6 +513,20 @@ describe('AiSdkModel end-to-end scenarios', () => {
 });
 
 describe('itemsToLanguageV2Messages', () => {
+  test('excludes application-owned item metadata from messages', () => {
+    const items: protocol.ModelItem[] = [
+      {
+        role: 'user',
+        content: [{ type: 'input_text', text: 'hi' }],
+        metadata: { kind: 'voice', visibility: 'client-only' },
+      } as any,
+    ];
+
+    const msgs = itemsToLanguageV2Messages(stubModel({}), items);
+    expect(msgs).toHaveLength(1);
+    expect(JSON.stringify(msgs)).not.toContain('metadata');
+  });
+
   test('converts user text and function call items', () => {
     const items: protocol.ModelItem[] = [
       {
