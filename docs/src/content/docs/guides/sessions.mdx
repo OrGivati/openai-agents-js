@@ -8,6 +8,7 @@ import sessionsQuickstart from '../../../../../examples/docs/sessions/basicSessi
 import manageHistory from '../../../../../examples/docs/sessions/manageHistory.ts?raw';
 import customSession from '../../../../../examples/docs/sessions/customSession.ts?raw';
 import sessionInputCallback from '../../../../../examples/docs/sessions/sessionInputCallback.ts?raw';
+import itemMetadata from '../../../../../examples/docs/sessions/itemMetadata.ts?raw';
 import responsesCompactionSession from '../../../../../examples/docs/sessions/responsesCompactionSession.ts?raw';
 import manualCompactionSession from '../../../../../examples/docs/sessions/responsesCompactionManualSession.ts?raw';
 import memorySessionExample from '../../../../../examples/docs/sessions/memorySession.ts?raw';
@@ -116,6 +117,20 @@ Implement the `Session` interface to back memory with Redis, DynamoDB, SQLite, o
 />
 
 Custom sessions let you enforce retention policies, add encryption, or attach metadata to each conversation turn before persisting it.
+
+---
+
+### Attach metadata to items
+
+Every item accepts an optional `metadata` field for application-owned data — message types, source channels, moderation flags, or visibility rules. The SDK treats it as opaque: it is preserved through session persistence, `RunState` serialization, and session callbacks, but it is **never sent to a model provider** (unlike `providerData`, which is forwarded to the provider API).
+
+Tag items when passing them to `run()`, enrich model output inside your `addItems()` implementation, or update metadata out-of-band in your own store — the SDK only ever appends new turn items, so it never overwrites stored metadata.
+
+<Code
+  lang="typescript"
+  code={itemMetadata}
+  title="Use item metadata for visibility and tagging"
+/>
 
 ---
 
