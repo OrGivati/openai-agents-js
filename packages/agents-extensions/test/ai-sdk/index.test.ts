@@ -4258,7 +4258,6 @@ describe('Extended thinking / Reasoning support', () => {
       expect(final.response.output).toHaveLength(2);
       expect(final.response.output[0]).toMatchObject({
         type: 'reasoning',
-        id: 'reasoning-1',
         content: [
           { type: 'input_text', text: 'Let me think... step by step.' },
         ],
@@ -4297,7 +4296,6 @@ describe('Extended thinking / Reasoning support', () => {
       expect(response.output).toEqual([
         {
           type: 'reasoning',
-          id: '0',
           content: [{ type: 'input_text', text: 'Hidden thought.' }],
           rawContent: [{ type: 'reasoning_text', text: 'Hidden thought.' }],
           providerData: {
@@ -4323,7 +4321,6 @@ describe('Extended thinking / Reasoning support', () => {
 
       expect(response.output[0]).toMatchObject({
         type: 'reasoning',
-        id: '0',
         content: [{ type: 'input_text', text: '' }],
         providerData: {
           model: 'stub:m',
@@ -4445,7 +4442,6 @@ describe('Extended thinking / Reasoning support', () => {
       expect(response.output).toMatchObject([
         {
           type: 'reasoning',
-          id: '10',
           content: [{ type: 'input_text', text: '' }],
           providerData: {
             anthropic: { redactedData: 'redacted_block' },
@@ -4453,7 +4449,6 @@ describe('Extended thinking / Reasoning support', () => {
         },
         {
           type: 'reasoning',
-          id: '2',
           content: [{ type: 'input_text', text: 'Visible thought.' }],
           providerData: {
             anthropic: { signature: 'signed_block' },
@@ -5321,5 +5316,91 @@ describe('AiSdkModel', () => {
         expect((error as any).statusCode).toBe(504);
       }
     });
+  });
+});
+
+describe('AiSdkModel streamed reasoning replay', () => {
+  test('keeps each turn reasoning in place when providers reuse block-index ids', async () => {
+    // Anthropic, Bedrock, and Google id reasoning stream parts by their block index
+    // within one response, so every turn's first thinking block arrives as id "0".
+    const prompts: any[][] = [];
+    let turn = 0;
+    const languageModel = stubModel({
+      async doStream(options) {
+        prompts.push(options.prompt as any[]);
+        turn += 1;
+        const reasoning = [
+          { type: 'reasoning-start', id: '0' },
+          { type: 'reasoning-delta', id: '0', delta: `thinking ${turn}` },
+          {
+            type: 'reasoning-end',
+            id: '0',
+            providerMetadata: { anthropic: { signature: `sig-${turn}` } },
+          },
+        ];
+        return {
+          stream: partsStream(
+            turn < 3
+              ? [
+                  ...reasoning,
+                  {
+                    type: 'tool-call',
+                    toolCallId: `call_${turn}`,
+                    toolName: 'lookup',
+                    input: '{}',
+                  },
+                  {
+                    type: 'finish',
+                    finishReason: 'tool-calls',
+                    usage: { inputTokens: 1, outputTokens: 1 },
+                  },
+                ]
+              : [
+                  ...reasoning,
+                  { type: 'text-delta', id: '1', delta: 'Done.' },
+                  {
+                    type: 'finish',
+                    finishReason: 'stop',
+                    usage: { inputTokens: 1, outputTokens: 1 },
+                  },
+                ],
+          ),
+        } as any;
+      },
+    });
+    const agent = new Agent({
+      name: 'Reasoning replay agent',
+      model: new AiSdkModel(languageModel),
+      tools: [
+        tool({
+          name: 'lookup',
+          description: 'Look up a value.',
+          parameters: z.object({}),
+          execute: async () => 'value',
+        }),
+      ],
+    });
+
+    const result = await run(agent, 'hi', { stream: true });
+    await result.completed;
+
+    const reasoningLayout = (prompt: any[]) =>
+      prompt.flatMap((message, index) =>
+        Array.isArray(message.content)
+          ? message.content
+              .filter((part: any) => part.type === 'reasoning')
+              .map((part: any) => ({
+                index,
+                text: part.text,
+                signature: part.providerOptions?.anthropic?.signature,
+              }))
+          : [],
+      );
+
+    expect(result.finalOutput).toBe('Done.');
+    expect(reasoningLayout(prompts[2])).toEqual([
+      { index: 1, text: 'thinking 1', signature: 'sig-1' },
+      { index: 4, text: 'thinking 2', signature: 'sig-2' },
+    ]);
   });
 });

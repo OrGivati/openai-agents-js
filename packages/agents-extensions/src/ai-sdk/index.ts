@@ -1537,9 +1537,10 @@ export class AiSdkModel implements Model {
           ) {
             continue;
           }
+          // AI SDK stream-part ids only correlate parts within one response (Anthropic,
+          // Bedrock, and Google reuse the block index), so they must not become item ids.
           outputs.push({
             type: 'reasoning',
-            id: entry.reasoningId !== 'default' ? entry.reasoningId : undefined,
             content: [{ type: 'input_text', text: reasoningBlock.text }],
             rawContent: [{ type: 'reasoning_text', text: reasoningBlock.text }],
             // Preserve provider-specific metadata (including signature for Anthropic extended thinking)
